@@ -1,0 +1,35 @@
+{
+  "_说明": "内置书源（个人本地自用）：番茄聚合 API。第三方镜像接口，非授权来源，仅限个人使用，请勿公开传播或用于商业用途。",
+  "bookSourceName": "番茄聚合API（个人自用）",
+  "bookSourceUrl": "https://fq.taijiwang.top",
+  "bookSourceGroup": "本地·自用",
+  "bookSourceComment": "非授权镜像源，仅个人使用。接口结构：/api/search、/api/detail、/api/directory、/api/content。",
+  "enabled": true,
+  "searchUrl": "https://fq.taijiwang.top/api/search?key={{key}}",
+  "ruleSearch": {
+    "bookList": "json:$.data.search_tabs[0].data[*].book_data[*]",
+    "name": "json:$.book_name",
+    "author": "json:$.author",
+    "kind": "json:$.category",
+    "intro": "json:$.abstract",
+    "coverUrl": "json:$.thumb_url",
+    "lastChapter": "json:$.serial_count",
+    "bookUrl": "json:$.book_id##^(.*)$##https://fq.taijiwang.top/api/detail?book_id=$1"
+  },
+  "ruleBookInfo": {
+    "name": "json:$.data.data.book_name",
+    "author": "json:$.data.data.author",
+    "kind": "json:$.data.data.category",
+    "intro": "json:$.data.data.abstract",
+    "coverUrl": "json:$.data.data.thumb_url",
+    "tocUrl": "json:$.data.data.book_id##^(.*)$##https://fq.taijiwang.top/api/directory?book_id=$1||url:##^.*book_id=(\\d+).*$##https://fq.taijiwang.top/api/directory?book_id=$1"
+  },
+  "ruleToc": {
+    "chapterList": "json:$.data.lists[*]",
+    "chapterName": "json:$.title",
+    "chapterUrl": "json:$.item_id##^(.*)$##https://fq.taijiwang.top/api/content?tab=%E5%B0%8F%E8%AF%B4&item_id=$1"
+  },
+  "ruleContent": {
+    "content": "json:$.data.content"
+  }
+}

@@ -1,0 +1,36 @@
+[
+ {
+  "_说明": "内置书源：Project Gutenberg（公有领域英文书）。整本书作为一章下载全文 HTML，页眉页脚按 Gutenberg 规定保留。",
+  "bookSourceName": "Project Gutenberg（公版英文书）",
+  "bookSourceUrl": "https://www.gutenberg.org",
+  "bookSourceGroup": "内置·公版",
+  "bookSourceComment": "公版书库，内容为公有领域作品。整本单章下载，适合下载长篇小说全文。",
+  "enabled": false,
+  "searchUrl": "https://www.gutenberg.org/ebooks/search/?query={{key}}",
+  "ruleSearch": {
+   "bookList": "css:li.booklink",
+   "name": "css:span.title@text",
+   "author": "css:span.subtitle@text",
+   "kind": "css:span.extra@text",
+   "intro": "css:span.extra@text",
+   "coverUrl": "css:img.cover-thumb@src",
+   "lastChapter": "css:span.extra@text",
+   "bookUrl": "css:a.link@href"
+  },
+  "ruleBookInfo": {
+   "name": "css:meta[property='og:title']@content## by .*?$##",
+   "author": "css:h1@text##.* by ##",
+   "intro": "css:meta[name='description']@content",
+   "coverUrl": "css:img.cover-thumb@src",
+   "tocUrl": ""
+  },
+  "ruleToc": {
+   "chapterList": "css:html",
+   "chapterName": "css:meta[property='og:title']@content## by .*?$##",
+   "chapterUrl": "css:a[href*='/cache/epub/']@href## .*##"
+  },
+  "ruleContent": {
+   "content": "css:body@textnodes"
+  }
+ }
+]

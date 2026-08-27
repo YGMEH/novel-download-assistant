@@ -1,0 +1,5 @@
+flask==3.0.3
+requests==2.32.3
+lxml==5.2.2
+cssselect==1.2.0
+jsonpath-ng==1.6.1

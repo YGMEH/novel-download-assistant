@@ -1,0 +1,44 @@
+{
+  "_说明": "这是一份示例书源，指向本地示例站点，仅用于演示规则写法与自测。它不指向任何真实网站。",
+  "bookSourceName": "示例源（仅演示规则写法）",
+  "bookSourceUrl": "http://127.0.0.1:18771",
+  "bookSourceGroup": "示例",
+  "bookSourceComment": "把这份文件复制一份，改成你自己有权访问的站点规则。字段含义见 README。",
+  "enabled": false,
+
+  "searchUrl": "http://127.0.0.1:18771/search?q={{key}}",
+
+  "ruleSearch": {
+    "bookList": "css:.result-list .book",
+    "name": "css:a.title@text",
+    "author": "css:.author@text",
+    "kind": "css:.cat@text",
+    "intro": "css:.desc@text",
+    "coverUrl": "css:img@src",
+    "lastChapter": "css:.latest@text",
+    "bookUrl": "css:a.title@href"
+  },
+
+  "ruleBookInfo": {
+    "name": "css:.bookname@text",
+    "author": "css:.author@text",
+    "kind": "css:.cat@text",
+    "intro": "css:.intro@text",
+    "coverUrl": "css:.cover img@src",
+    "lastChapter": "css:.latest@text",
+    "tocUrl": "css:a.toc-link@href"
+  },
+
+  "ruleToc": {
+    "chapterList": "css:.chapter-list li",
+    "chapterName": "css:a@text",
+    "chapterUrl": "css:a@href",
+    "nextTocUrl": "css:a.next-page@href"
+  },
+
+  "ruleContent": {
+    "content": "css:#content@html",
+    "nextContentUrl": "css:a.next-part@href",
+    "replaceRegex": "本站域名.*?请收藏##\n广告位.*?结束##"
+  }
+}

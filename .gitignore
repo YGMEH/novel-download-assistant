@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# 书源与下载产物不入库
+# - sources/*.json        顶层 json 为用户个人导入的书源，不提交
+# - sources/builtin/      内置书源随项目提交（公版源 + yckceo 快照 + 番茄聚合 API）
+sources/*.json
+downloads/
+.cache/
+.selftest_out/
+config.json
+
+.DS_Store
+.idea/
+.vscode/

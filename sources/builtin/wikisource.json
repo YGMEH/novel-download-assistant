@@ -1,0 +1,33 @@
+[
+ {
+  "_说明": "内置书源：中文维基文库（zh.wikisource.org）。搜索走 MediaWiki API，按回分页的公版古籍（四大名著等）可整本下载。",
+  "bookSourceName": "中文维基文库（公版古籍）",
+  "bookSourceUrl": "https://zh.wikisource.org",
+  "bookSourceGroup": "内置·公版",
+  "bookSourceComment": "公版古籍书库，适合搜索四大名著等按回分页的作品。搜索接口为维基文库公开 API。",
+  "enabled": false,
+  "searchUrl": "https://zh.wikisource.org/w/api.php?action=query&list=search&srsearch={{key}}&srnamespace=0&srlimit=20&format=json&formatversion=2",
+  "ruleSearch": {
+   "bookList": "json:$.query.search[*]",
+   "name": "json:$.title",
+   "author": "",
+   "intro": "json:$.snippet##<[^>]+>##",
+   "bookUrl": "json:$.title##^(.*)$##https://zh.wikisource.org/wiki/$1"
+  },
+  "ruleBookInfo": {
+   "name": "css:h1#firstHeading@text",
+   "author": "",
+   "intro": "css:.mw-parser-output p@text",
+   "tocUrl": ""
+  },
+  "ruleToc": {
+   "chapterList": "css:.mw-parser-output ul li a[href*='%E7%AC%AC']",
+   "chapterName": "css:a@text",
+   "chapterUrl": "css:a@href"
+  },
+  "ruleContent": {
+   "content": "css:.mw-parser-output p, .mw-parser-output .poem@textnodes",
+   "replaceRegex": "回目录[\\s]*下一回##\n\\[\\d+\\]##"
+  }
+ }
+]
