@@ -1,7 +1,11 @@
 // 小说聚合后端（Netlify Functions v2，零依赖）
-// 聚合：番茄聚合(fq.taijiwang.top) + 幻梦轻小说(huanmengacg.com)
+// 聚合四路：番茄聚合(fq.taijiwang.top) + 幻梦轻小说(huanmengacg.com)
+//        + 无限小说网(wuxianbook.com) + 丁丁精选(曦灵系，猫眼同库备源)
 // 仅做接口转发与格式统一：搜索 / 详情 / 目录 / 正文
 // 说明：个人学习用途，不对任何上游内容负责。
+
+import { wuxianSearch, wuxianDetail, wuxianToc, wuxianContent, xilingSearch, xilingDetail, xilingToc, xilingContent } from './sources_extra.mjs';
+import { zonghengSearch, zonghengDetail, zonghengToc, zonghengContent, aixiaSearch, aixiaDetail, aixiaToc, aixiaContent, shaonianSearch, shaonianDetail, shaonianToc, shaonianContent } from './sources_more.mjs';
 
 const UA = 'Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Mobile Safari/537.36';
 const UPSTREAM_TIMEOUT_MS = 12000;
@@ -183,6 +187,11 @@ async function handle(action, params) {
       const sources = [
         { name: 'fanqie', fn: fanqieSearch },
         { name: 'huanmeng', fn: huanmengSearch },
+        { name: 'wuxian', fn: wuxianSearch },
+        { name: 'dingding', fn: xilingSearch },
+        { name: 'zongheng', fn: zonghengSearch },
+        { name: 'aixia', fn: aixiaSearch },
+        { name: 'shaonian', fn: shaonianSearch },
       ];
       const results = await Promise.allSettled(sources.map(s => s.fn(kw)));
       return json({
@@ -201,6 +210,11 @@ async function handle(action, params) {
       if (!src || !id) return errorJson('缺少 source 或 id', 400);
       const book = src === 'fanqie' ? await fanqieDetail(id)
                  : src === 'huanmeng' ? await huanmengDetail(id)
+                 : src === 'wuxian' ? await wuxianDetail(id)
+                 : src === 'dingding' ? await xilingDetail(id)
+                 : src === 'zongheng' ? await zonghengDetail(id)
+                 : src === 'aixia' ? await aixiaDetail(id)
+                 : src === 'shaonian' ? await shaonianDetail(id)
                  : null;
       if (!book) return errorJson('未知来源', 400);
       return json({ ok: true, book });
@@ -212,6 +226,11 @@ async function handle(action, params) {
       if (!src || !id) return errorJson('缺少 source 或 id', 400);
       const chapters = src === 'fanqie' ? await fanqieToc(id)
                      : src === 'huanmeng' ? await huanmengToc(id)
+                     : src === 'wuxian' ? await wuxianToc(id)
+                     : src === 'dingding' ? await xilingToc(id)
+                     : src === 'zongheng' ? await zonghengToc(id)
+                     : src === 'aixia' ? await aixiaToc(id)
+                     : src === 'shaonian' ? await shaonianToc(id)
                      : null;
       if (chapters === null) return errorJson('未知来源', 400);
       return json({ ok: true, chapters });
@@ -225,13 +244,21 @@ async function handle(action, params) {
       let content = '';
       if (src === 'fanqie') content = await fanqieContent(cid);
       else if (src === 'huanmeng') content = bid ? await huanmengContent(bid, cid) : '';
+      else if (src === 'wuxian') content = bid ? await wuxianContent(bid, cid) : '';
+      else if (src === 'zongheng') content = bid ? await zonghengContent(bid, cid) : '';
+      else if (src === 'aixia') content = bid ? await aixiaContent(bid, cid) : '';
+      else if (src === 'shaonian') content = bid ? await shaonianContent(bid, cid) : '';
+      else if (src === 'dingding') {
+        if (!bid) return errorJson('缺少 bid', 400);
+        content = await xilingContent(bid, cid, (params.get('w') || '').trim(), (params.get('path') || '').trim());
+      }
       else return errorJson('未知来源', 400);
       if (!content) return errorJson('正文为空', 404);
       return json({ ok: true, content });
     }
 
     case 'ping':
-      return json({ ok: true, time: Date.now(), sources: ['fanqie', 'huanmeng'] });
+      return json({ ok: true, time: Date.now(), sources: ['fanqie', 'huanmeng', 'wuxian', 'dingding', 'zongheng', 'aixia', 'shaonian'] });
 
     default:
       return errorJson('未知 action，可用：search / detail / toc / content / ping', 400);
