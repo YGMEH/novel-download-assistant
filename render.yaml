@@ -1,0 +1,8 @@
+services:
+  - type: web
+    name: novel-download-assistant
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python server.py
+    healthCheckPath: /api/sources

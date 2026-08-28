@@ -559,8 +559,10 @@ def api_file_download(name: str):
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="小说下载助手 · 本地服务")
-    parser.add_argument("--host", default="127.0.0.1", help="监听地址，默认仅本机")
-    parser.add_argument("--port", type=int, default=8765)
+    default_host = "0.0.0.0" if os.environ.get("PORT") else "127.0.0.1"
+    parser.add_argument("--host", default=default_host,
+                        help="监听地址，默认仅本机；检测到 PORT 环境变量（云平台部署）时自动改为 0.0.0.0")
+    parser.add_argument("--port", type=int, default=int(os.environ.get("PORT", "8765")))
     parser.add_argument("--open", action="store_true", help="启动后自动打开浏览器")
     args = parser.parse_args()
 
