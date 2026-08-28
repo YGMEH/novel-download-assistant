@@ -29,6 +29,10 @@ input{font:inherit}
 .book h3{font-size:16px;margin-bottom:2px}
 .book .meta{color:var(--tx2);font-size:13px;margin-bottom:4px}
 .book .intro{color:var(--tx2);font-size:13px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.sbadge{display:inline-block;font-size:11px;line-height:1;padding:3px 7px;border-radius:5px;background:var(--brand2);color:var(--brand);margin-left:6px;vertical-align:1px;font-weight:normal}
+.grouphead{color:var(--tx2);font-size:13px;margin:14px 2px 8px}
+.grouphead b{color:var(--tx)}
+.modebadge{font-size:11px;color:var(--tx2);background:var(--bg);border-radius:5px;padding:3px 6px;white-space:nowrap}
 .empty{color:var(--tx2);text-align:center;padding:60px 0}
 .detail{background:var(--card);border-radius:12px;padding:14px}
 .detail .hd{display:flex;gap:14px}
@@ -71,11 +75,12 @@ input{font:inherit}
     <input id="kw" placeholder="搜索书名或作者" enterkeyhint="search">
   </div>
   <button class="btn" id="btnSearch">搜索</button>
+  <span class="modebadge" id="modeBadge">检测中</span>
   <button class="btn" id="btnNight" title="夜间模式">🌙</button>
 </div>
 
 <div class="wrap" id="listView">
-  <div class="empty" id="listTip">输入书名开始搜索</div>
+  <div class="empty" id="listTip">输入书名开始搜索「剑来」这类网文或「刀剑神域」这类轻小说</div>
   <div id="list"></div>
 </div>
 
@@ -116,10 +121,47 @@ input{font:inherit}
 <div class="toast" id="toast"></div>
 
 <script>
-/* ============ 纯浏览器直连番茄聚合 API（服务端已开放 CORS:*） ============ */
-const API = 'https://fq.taijiwang.top';
+/* ============ 数据层：优先聚合后端，静态站自动回退直连 ============ */
+const AGG = '/api/aggregator';          // 聚合后端路由（部署在 Netlify 时存在）
+const FQ  = 'https://fq.taijiwang.top'; // 番茄聚合源（CORS 开放，静态站直连兜底）
+let MODE = 'probing';                   // agg | direct | probing
 const $ = s => document.querySelector(s);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
+const SRC_NAME = { fanqie: '番茄', huanmeng: '幻梦' };
+
+async function probeMode(){
+  try{
+    const c = new AbortController(); const t = setTimeout(() => c.abort(), 4000);
+    const r = await fetch(AGG + '?action=ping', { signal: c.signal });
+    clearTimeout(t);
+    const j = await r.json();
+    MODE = (j && j.ok) ? 'agg' : 'direct';
+  }catch(e){ MODE = 'direct'; }
+  renderModeBadge();
+}
+function renderModeBadge(){
+  const el = $('#modeBadge'); if (!el) return;
+  el.textContent = MODE === 'agg' ? '聚合模式' : (MODE === 'direct' ? '直连模式' : '检测中');
+}
+
+async function aggApi(action, params){
+  const qs = new URLSearchParams(params).toString();
+  const r = await fetch(`${AGG}?action=${action}&${qs}`);
+  if (!r.ok){
+    let m = 'HTTP ' + r.status;
+    try{ m = (await r.json()).error || m; }catch(e){}
+    throw new Error(m);
+  }
+  return r.json();
+}
+async function directApi(path, params){
+  const qs = new URLSearchParams(params).toString();
+  const r = await fetch(`${FQ}${path}?${qs}`);
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  const j = await r.json();
+  if (j.code !== 200) throw new Error(j.message || '接口错误');
+  return j.data;
+}
 
 let toastTimer = null;
 function toast(msg, ms = 2200){
@@ -128,44 +170,61 @@ function toast(msg, ms = 2200){
   if (ms > 0) toastTimer = setTimeout(() => t.style.display = 'none', ms);
 }
 
-async function api(path, params){
-  const qs = new URLSearchParams(params).toString();
-  const r = await fetch(`${API}${path}?${qs}`);
-  if (!r.ok) throw new Error('HTTP ' + r.status);
-  const j = await r.json();
-  if (j.code !== 200) throw new Error(j.message || '接口错误');
-  return j.data;
-}
-
 /* ============ 搜索 ============ */
-let lastQuery = '';
 async function doSearch(){
   const kw = $('#kw').value.trim();
-  if (!kw) return;
-  lastQuery = kw;
-  $('#listTip').textContent = '搜索中…';
+  if (!kw || MODE === 'probing'){ if (MODE === 'probing') toast('正在检测模式，请稍候'); return; }
+  $('#listTip').textContent = MODE === 'agg' ? '聚合搜索中…' : '搜索中…';
   $('#list').innerHTML = '';
   showList();
   try{
-    const d = await api('/api/search', { key: kw });
-    const blocks = d?.search_tabs?.[0]?.data || [];
-    const books = [];
-    for (const b of blocks){
-      for (const it of (b.book_data || [])){
-        if (it && it.book_id && it.book_name) books.push(it);
+    if (MODE === 'agg'){
+      const j = await aggApi('search', { key: kw });
+      const groups = j.sources || [];
+      const total = groups.reduce((n, g) => n + (g.books ? g.books.length : 0), 0);
+      if (!total){ $('#listTip').textContent = '没有找到相关书籍'; return; }
+      $('#listTip').textContent = `找到 ${total} 本（` +
+        groups.map(g => `${SRC_NAME[g.source] || g.source} ${g.ok ? g.books.length : '失败'}`).join(' · ') + '）';
+      let html = '';
+      for (const g of groups){
+        const label = SRC_NAME[g.source] || g.source;
+        if (!g.books || !g.books.length){
+          html += `<div class="grouphead">${label}：暂无结果或源临时不可用${g.error ? '（' + esc(g.error) + '）' : ''}</div>`;
+          continue;
+        }
+        html += `<div class="grouphead"><b>${label}</b> · ${g.books.length} 本</div>`;
+        html += g.books.map(b => `
+          <div class="book" onclick="openDetail('${g.source}','${b.id}')">
+            <img loading="lazy" src="${esc(b.cover || '')}" onerror="this.style.visibility='hidden'">
+            <div class="info">
+              <h3>${esc(b.name)}<span class="sbadge">${label}</span></h3>
+              <div class="meta">${esc(b.author || '佚名')}${b.category ? ' · ' + esc(b.category) : ''}</div>
+              <div class="intro">${esc(b.intro || '')}</div>
+            </div>
+          </div>`).join('');
       }
+      $('#list').innerHTML = html;
+    } else {
+      const d = await directApi('/api/search', { key: kw });
+      const blocks = d?.search_tabs?.[0]?.data || [];
+      const books = [];
+      for (const b of blocks){
+        for (const it of (b.book_data || [])){
+          if (it && it.book_id && it.book_name) books.push(it);
+        }
+      }
+      if (!books.length){ $('#listTip').textContent = '没有找到相关书籍'; return; }
+      $('#listTip').textContent = `找到 ${books.length} 本（点卡片查看详情）`;
+      $('#list').innerHTML = books.map(b => `
+        <div class="book" onclick="openDetail('fanqie','${b.book_id}')">
+          <img loading="lazy" src="${esc(b.thumb_url || '')}" onerror="this.style.visibility='hidden'">
+          <div class="info">
+            <h3>${esc(b.book_name)}<span class="sbadge">番茄</span></h3>
+            <div class="meta">${esc(b.author || '佚名')}${b.category ? ' · ' + esc(b.category) : ''}</div>
+            <div class="intro">${esc(b.abstract || '')}</div>
+          </div>
+        </div>`).join('');
     }
-    if (!books.length){ $('#listTip').textContent = '没有找到相关书籍'; return; }
-    $('#listTip').textContent = `找到 ${books.length} 本（点卡片查看详情）`;
-    $('#list').innerHTML = books.map(b => `
-      <div class="book" onclick="openDetail('${b.book_id}')">
-        <img loading="lazy" src="${esc(b.thumb_url||'')}" onerror="this.style.visibility='hidden'">
-        <div class="info">
-          <h3>${esc(b.book_name)}</h3>
-          <div class="meta">${esc(b.author||'佚名')}${b.category?' · '+esc(b.category):''}</div>
-          <div class="intro">${esc(b.abstract||'')}</div>
-        </div>
-      </div>`).join('');
   }catch(e){
     $('#listTip').textContent = '搜索失败：' + e.message + '（接口临时不可用请稍后再试）';
   }
@@ -173,21 +232,28 @@ async function doSearch(){
 
 /* ============ 详情 ============ */
 let book = null, chapters = [];
-async function openDetail(id){
+async function openDetail(source, id){
   showDetail();
+  book = { source, id };
   $('#dTitle').textContent = '加载中…';
   $('#dIntro').textContent = ''; $('#dMeta').textContent = ''; $('#dCount').textContent = '';
   $('#dCover').removeAttribute('src');
   $('#btnDl').disabled = true; $('#dlBar').style.display = 'none';
   try{
-    const d = await api('/api/detail', { book_id: id });
-    book = d?.data || {};
-    book.book_id = id;
-    $('#dTitle').textContent = book.book_name || '未知书名';
-    $('#dMeta').textContent = `${book.author||'佚名'}${book.category?' · '+book.category:''}`;
-    $('#dCount').textContent = book.serial_count ? `共 ${book.serial_count} 章` : '';
-    $('#dIntro').textContent = book.abstract || '（无简介）';
-    if (book.thumb_url) $('#dCover').src = book.thumb_url;
+    if (MODE === 'agg'){
+      const j = await aggApi('detail', { source, id });
+      book = j.book || book;
+    } else {
+      const d = await directApi('/api/detail', { book_id: id });
+      const b = d?.data || {};
+      book = { source: 'fanqie', id: String(id), name: b.book_name, author: b.author,
+               intro: b.abstract, cover: b.thumb_url, category: b.category, serial: b.serial_count };
+    }
+    $('#dTitle').textContent = book.name || '未知书名';
+    $('#dMeta').innerHTML = `${esc(book.author || '佚名')}${book.category ? ' · ' + esc(book.category) : ''} <span class="sbadge">${SRC_NAME[book.source] || book.source}</span>`;
+    $('#dCount').textContent = book.serial ? `共 ${book.serial} 章` : '';
+    $('#dIntro').textContent = book.intro || '（无简介）';
+    if (book.cover) $('#dCover').src = book.cover;
     loadChapters();
   }catch(e){
     $('#dTitle').textContent = '加载失败';
@@ -197,8 +263,13 @@ async function openDetail(id){
 
 async function loadChapters(){
   try{
-    const d = await api('/api/directory', { book_id: book.book_id });
-    chapters = (d?.lists || []).map(c => ({ title: c.title, item_id: String(c.item_id) }));
+    if (MODE === 'agg'){
+      const j = await aggApi('toc', { source: book.source, id: book.id });
+      chapters = (j.chapters || []).map(c => ({ title: c.title, cid: String(c.cid) }));
+    } else {
+      const d = await directApi('/api/directory', { book_id: book.id });
+      chapters = (d?.lists || []).map(c => ({ title: c.title, cid: String(c.item_id) }));
+    }
     if (chapters.length) $('#btnDl').disabled = false;
     if (book && !$('#dCount').textContent) $('#dCount').textContent = `共 ${chapters.length} 章`;
   }catch(e){ chapters = []; }
@@ -206,6 +277,14 @@ async function loadChapters(){
 
 /* ============ 阅读器 ============ */
 let rIdx = -1;
+async function fetchChapterText(cid){
+  if (MODE === 'agg'){
+    const j = await aggApi('content', { source: book.source, bid: book.id, cid });
+    return j.content || '';
+  }
+  const d = await directApi('/api/content', { tab: '小说', item_id: cid });
+  return d?.content || '';
+}
 async function openReader(i){
   if (!chapters.length){ toast('目录未就绪'); return; }
   rIdx = Math.max(0, Math.min(chapters.length - 1, i));
@@ -219,8 +298,7 @@ async function openReader(i){
   $('#rNext').disabled = rIdx === chapters.length - 1;
   window.scrollTo(0, 0);
   try{
-    const d = await api('/api/content', { tab: '小说', item_id: chapters[rIdx].item_id });
-    const c = d?.content;
+    const c = await fetchChapterText(chapters[rIdx].cid);
     $('#rCt').textContent = c || '（本章内容为空）';
     if (!c) toast('本章内容为空或接口失败');
   }catch(e){ $('#rCt').textContent = '加载失败：' + e.message; }
@@ -232,7 +310,6 @@ function closeReader(){
 }
 function openCata(){
   if (!chapters.length){ toast('目录未就绪'); return; }
-  const lines = chapters.map((c, i) => `${i+1}. ${c.title}`).join('\n');
   const n = prompt(`共 ${chapters.length} 章\n输入章节序号跳转：`, String(rIdx + 1));
   if (n !== null){
     const k = parseInt(n, 10);
@@ -264,9 +341,9 @@ async function downloadBook(){
       let ok = false;
       for (let t = 0; t < 3 && !ok; t++){
         try{
-          const d = await api('/api/content', { tab: '小说', item_id: chapters[i].item_id });
-          if (d?.content){
-            out[i] = `\n== ${chapters[i].title} ==\n\n${d.content}\n`;
+          const c = await fetchChapterText(chapters[i].cid);
+          if (c){
+            out[i] = `\n== ${chapters[i].title} ==\n\n${c}\n`;
             ok = true;
           }
         }catch(e){ await sleep(600 * (t + 1)); }
@@ -276,14 +353,15 @@ async function downloadBook(){
       await sleep(120);
     }
   }
-  toast(`开始下载《${book.book_name}》共 ${total} 章，请保持页面打开`);
+  toast(`开始下载《${book.name || '书名未知'}》共 ${total} 章，请保持页面打开`);
   await Promise.all(Array.from({ length: CONC }, worker));
-  const header = `《${book.book_name}》\n作者：${book.author||'佚名'}\n来源：番茄聚合API（网页版）\n` +
+  const srcLabel = SRC_NAME[book.source] || book.source || '未知来源';
+  const header = `《${book.name || '书名未知'}》\n作者：${book.author || '佚名'}\n来源：${srcLabel}（网页在线版）\n` +
     `章节数：${total}（失败 ${failed.length}）\n下载时间：${new Date().toLocaleString()}\n${'='.repeat(32)}\n`;
   const blob = new Blob([header + out.join('\n')], { type: 'text/plain;charset=utf-8' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `${book.book_name}.txt`;
+  a.download = `${book.name || '书名未知'}.txt`;
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 30000);
   $('#dlTxt').textContent = failed.length ? `完成，${failed.length} 章失败（已留占位）` : '下载完成';
@@ -295,8 +373,6 @@ async function downloadBook(){
 function showList(){
   $('#detailView').style.display = 'none';
   $('#listView').style.display = 'block';
-  if (lastQuery && !$('#list').children.length && $('#listTip').textContent.includes('开始'))
-    $('#listTip').textContent = '输入书名开始搜索';
 }
 function showDetail(){
   $('#listView').style.display = 'none';
@@ -304,7 +380,7 @@ function showDetail(){
   window.scrollTo(0, 0);
 }
 function esc(s){
-  return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'"',"'":'&#39;'}[c]));
+  return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&' + 'quot;',"'":'&#39;'}[c]));
 }
 $('#btnSearch').onclick = doSearch;
 $('#kw').addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
@@ -315,6 +391,7 @@ $('#btnNight').onclick = () => {
   localStorage.night = document.documentElement.classList.contains('night') ? '1' : '';
 };
 if (localStorage.night) document.documentElement.classList.add('night');
+probeMode();
 </script>
 
 </body>
