@@ -26,6 +26,40 @@ Set-ExecutionPolicy -Scope Process Bypass -Force
 ```
 
 脚本会创建 `.venv`、安装 `requirements.txt`、放行 Windows 防火墙 TCP 8765、后台启动服务，并检查本机 `/api/sources`。
+## 推荐方式：OSS 自动部署
+
+这是当前 ECS 无法稳定访问 GitHub 时的推荐方案：GitHub Actions 在每次推送后生成部署包并上传到阿里云 OSS，ECS 只从 OSS 下载，不再连接 GitHub。
+
+需要准备：
+
+- OSS Bucket：建议与 ECS 同地域，关闭公共写入，只开放 `novel/latest.zip` 的公共读取；
+- GitHub 仓库 Secrets：`OSS_ENDPOINT`、`OSS_BUCKET`、`OSS_ACCESS_KEY_ID`、`OSS_ACCESS_KEY_SECRET`；AccessKey 只放在 GitHub Secrets，不要写入代码或发到聊天；
+- GitHub Actions 工作流：`.github/workflows/publish-oss.yml`。
+
+工作流成功后，部署包地址格式为：
+
+```text
+https://<bucket>.<endpoint>/novel/latest.zip
+```
+
+例如 endpoint 为 `https://oss-cn-hangzhou.aliyuncs.com` 时，地址为 `https://<bucket>.oss-cn-hangzhou.aliyuncs.com/novel/latest.zip`。
+
+ECS 安装 OSS 拉取任务时执行：
+
+```powershell
+Invoke-WebRequest -UseBasicParsing -TimeoutSec 60 https://ghfast.top/https://raw.githubusercontent.com/YGMEH/novel-download-assistant/main/oss_deploy_windows.ps1 -OutFile C:\oss_deploy_windows.ps1; powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:\oss_deploy_windows.ps1 -Install -PackageUrl "https://<bucket>.<endpoint>/novel/latest.zip"
+```
+
+任务名为 `NovelOssDeploy`，每 5 分钟检查一次 OSS 包；下载、解压、语法检查或服务健康检查失败时恢复备份。
+
+## 备用方式：GitHub 镜像自动部署
+
+如果你暂时不配置 OSS，可以使用旧的 GitHub 镜像轮询脚本，但它受镜像可用性影响，不作为首选。
+
+```powershell
+Invoke-WebRequest -UseBasicParsing -TimeoutSec 60 https://ghfast.top/https://raw.githubusercontent.com/YGMEH/novel-download-assistant/main/auto_deploy_windows.ps1 -OutFile C:\auto_deploy_windows.ps1; powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:\auto_deploy_windows.ps1 -Install
+```
+
 ## 推荐方式：一次安装自动部署
 
 如果项目已经位于 `C:\novel\novel-download-assistant-main`，只需在管理员 PowerShell 执行下面一行：
