@@ -325,10 +325,13 @@ class SourceStore:
         self.reload()
 
     def reload(self) -> None:
-        """扫描书源目录（含 builtin/ 等子目录），*.json 都会被加载。"""
+        """扫描书源目录；默认只加载已审核安全包，保留其他文件供回滚。"""
+        safe_only = os.environ.get("NOVEL_SAFE_SOURCES", "1").lower() not in ("0", "false", "no")
         with _LOCK:
             self._cache = {}
             for root, _dirs, files in os.walk(self.dir):
+                if safe_only and os.path.relpath(root, self.dir).replace("\\", "/") == "builtin":
+                    files = [fn for fn in files if fn == "reading_sources_safe.json"]
                 for fn in sorted(files):
                     if not fn.lower().endswith(".json"):
                         continue
