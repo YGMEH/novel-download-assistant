@@ -1,6 +1,6 @@
 #Requires -Version 5.1
 #Requires -RunAsAdministrator
-<##
+<#
 .SYNOPSIS
   Install or run the automatic GitHub-to-Windows deployment worker.
 
