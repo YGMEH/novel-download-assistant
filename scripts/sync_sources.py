@@ -92,9 +92,9 @@ def collect_bundle_ids() -> list[str]:
                 ids.append(m.group(1))
     return list(dict.fromkeys(ids))
 
-
 def bundle_url(bundle_id: str) -> str:
     return JSON_URL.format(bundle_id)
+
 
 
 def load_bundles(ids: list[str]) -> list[dict]:
@@ -123,7 +123,6 @@ def load_bundles(ids: list[str]) -> list[dict]:
         if isinstance(data, list):
             all_sources.extend(x for x in data if isinstance(x, dict))
     return all_sources
-
 
 def is_safe_shape(raw: dict) -> bool:
     identity = " ".join(str(raw.get(k, "")) for k in (
@@ -225,6 +224,7 @@ def main() -> int:
     ))
     healthy = healthy[:TARGET]
     digest = hashlib.sha256(json.dumps(healthy, ensure_ascii=False, sort_keys=True).encode()).hexdigest()
+
     atomic_write(healthy, args.dry_run)
     if not args.dry_run:
         META_FILE.write_text(json.dumps({"updated_at": datetime.now().isoformat(timespec="seconds"), "count": len(healthy), "sha256": digest, "bundles": ids}, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
