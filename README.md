@@ -3,8 +3,10 @@
 一个本地运行的「书源解析 + 搜索 + 整本 TXT 下载」工具。
 本地会自动加载 `sources/builtin/` 里的内置书源；个人另行导入的书源放在 `sources/` 顶层。
 
-**🌐 在线网页版（免翻墙、免安装，打开即用）**：
-**https://ygmeh.github.io/novel-download-assistant/**
+**🌐 静态演示页（非完整多源后端）**：
+https://ygmeh.github.io/novel-download-assistant/
+
+完整多源公网部署请参阅：[WINDOWS_ECS_DEPLOY.md](WINDOWS_ECS_DEPLOY.md)。
 
 **📚 过滤后的多源一键导入（已移除 18+ / 成人 / 漫画 / 有声 / 登录 / 脚本 / 加密源，共 356 条安全书源）：**
 https://raw.githubusercontent.com/YGMEH/novel-download-assistant/main/sources/builtin/reading_sources_safe.json
