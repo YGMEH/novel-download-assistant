@@ -27,11 +27,15 @@ from source_manager import BookSource  # noqa: E402
 
 LIST_URL = "https://www.yckceo.com/yuedu/shuyuans/index.html"
 JSON_URL = "https://www.yckceo.com/yuedu/shuyuans/json/id/{}.json"
+EXTRA_SOURCE_URLS = (
+    "https://legado.aoaostar.com/sources/b778fe6b.json",
+)
 OUT_FILE = ROOT / "sources" / "builtin" / "reading_sources_safe.json"
 META_FILE = ROOT / "sources" / "builtin" / "reading_sources_safe.meta.json"
 TARGET = 1000
 MIN_TARGET = 800
 MAX_PAGES = 3
+PAGE_SIZE = 100
 FETCH_TIMEOUT = 20
 PROBE_TIMEOUT = 4
 PROBE_WORKERS = 12
@@ -108,6 +112,16 @@ def load_bundles(ids: list[str]) -> list[dict]:
         all_sources.extend(x for x in data if isinstance(x, dict))
         if len(all_sources) >= TARGET * 3:
             break
+    for url in EXTRA_SOURCE_URLS:
+        try:
+            data = get(url).json()
+        except Exception as exc:
+            print(f"WARN extra source {url}: {exc}", file=sys.stderr)
+            continue
+        if isinstance(data, dict):
+            data = [data]
+        if isinstance(data, list):
+            all_sources.extend(x for x in data if isinstance(x, dict))
     return all_sources
 
 
@@ -115,7 +129,16 @@ def is_safe_shape(raw: dict) -> bool:
     identity = " ".join(str(raw.get(k, "")) for k in (
         "bookSourceName", "bookSourceGroup", "bookSourceComment", "bookSourceUrl"
     ))
+    blob = json.dumps(raw, ensure_ascii=False)
     if ADULT_RE.search(identity):
+        return False
+    if raw.get("bookSourceType", 0) != 0:
+        return False
+    if raw.get("loginUrl") or raw.get("loginUi") or raw.get("loginCheckJs"):
+        return False
+    if raw.get("enabledCookieJar"):
+        return False
+    if re.search(r"(?i)@js:|<js>|\{\{java\.|javascript:|webview|内置浏览器|验证码|滑块", blob):
         return False
     src = BookSource(raw)
     cap = src.capability()
@@ -196,9 +219,13 @@ def main() -> int:
         print(f"ERROR healthy sources {len(healthy)} below minimum {MIN_TARGET}; old file kept", file=sys.stderr)
         print(json.dumps(failed, ensure_ascii=False, sort_keys=True))
         return 3
-    healthy.sort(key=lambda item: (-int(BookSource(item).capability()["quality"]), str(item.get("bookSourceName", ""))))
+    healthy.sort(key=lambda item: (
+        -int(BookSource(item).capability()["quality"]),
+        str(item.get("bookSourceName", "")),
+    ))
     healthy = healthy[:TARGET]
     digest = hashlib.sha256(json.dumps(healthy, ensure_ascii=False, sort_keys=True).encode()).hexdigest()
+
     atomic_write(healthy, args.dry_run)
     if not args.dry_run:
         META_FILE.write_text(json.dumps({"updated_at": datetime.now().isoformat(timespec="seconds"), "count": len(healthy), "sha256": digest, "bundles": ids}, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
