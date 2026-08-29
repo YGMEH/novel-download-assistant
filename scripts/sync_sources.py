@@ -225,7 +225,6 @@ def main() -> int:
     ))
     healthy = healthy[:TARGET]
     digest = hashlib.sha256(json.dumps(healthy, ensure_ascii=False, sort_keys=True).encode()).hexdigest()
-
     atomic_write(healthy, args.dry_run)
     if not args.dry_run:
         META_FILE.write_text(json.dumps({"updated_at": datetime.now().isoformat(timespec="seconds"), "count": len(healthy), "sha256": digest, "bundles": ids}, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
