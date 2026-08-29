@@ -9,7 +9,7 @@
 html.night{--bg:#141413;--paper:#1c1b19;--ink:#f1eee8;--muted:#aaa49b;--soft:#706b64;--line:#37342f;--accent:#c79d78;--accent-soft:#332920;--shadow:0 20px 55px rgba(0,0,0,.3)}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}html,body{min-height:100%;background:var(--bg);color:var(--ink)}body{font:15px/1.75 var(--sans);-webkit-font-smoothing:antialiased}button,input{font:inherit;color:inherit}button{border:0;background:none;cursor:pointer}::selection{background:var(--accent);color:#fff}a{color:var(--accent)}
 .top{position:sticky;top:0;z-index:30;background:color-mix(in srgb,var(--bg) 94%,transparent);border-bottom:1px solid var(--line);padding:17px max(20px,calc((100vw - 1040px)/2)) 15px;display:flex;align-items:center;gap:22px}.brand{font:700 20px/1 var(--serif);letter-spacing:.14em;white-space:nowrap}.brand span{display:block;font:500 9px/1 var(--sans);letter-spacing:.3em;color:var(--muted);margin-top:8px}.sbox{height:42px;display:flex;align-items:center;gap:10px;flex:1;max-width:520px;margin-left:auto;border-bottom:1px solid var(--line);transition:border-color .25s}.sbox:focus-within{border-color:var(--accent)}.sbox>svg{width:17px;stroke:var(--muted);fill:none;stroke-width:1.6}.sbox input{min-width:0;flex:1;border:0;outline:0;background:transparent;font-size:14px}.sbox input::placeholder{color:var(--soft)}.search-btn{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:var(--ink);color:var(--bg);transition:transform .2s}.search-btn svg,.icon-btn svg{width:17px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.search-btn:active,.icon-btn:active{transform:scale(.9)}.icon-btn{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;color:var(--muted)}
-.view{display:none;max-width:1040px;margin:auto;padding:72px max(20px,calc((100vw - 900px)/2)) 128px;animation:up .4s ease}.view.show{display:block}@keyframes up{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}.hero{display:flex;justify-content:space-between;align-items:end;border-bottom:1px solid var(--line);padding-bottom:28px;margin-bottom:22px}.eyebrow{font-size:10px;letter-spacing:.25em;color:var(--accent);text-transform:uppercase;margin-bottom:16px}.hero h1{font:700 clamp(34px,7vw,58px)/1.12 var(--serif);letter-spacing:-.05em}.hero p{margin-top:15px;color:var(--muted);font-size:13px}#viewSearch.has-results .hero{display:none}.tip{min-height:300px;display:grid;place-content:center;text-align:center;color:var(--soft);font-size:13px}.tip.busy{min-height:auto;display:block;place-content:auto;padding:6px 0 14px}.ticon{width:58px;height:58px;border:1px solid var(--line);border-radius:50%;display:grid;place-items:center;margin:0 auto 15px}.ticon svg{width:23px;stroke:var(--muted);fill:none}
+.view{display:none;max-width:1040px;margin:auto;padding:72px max(20px,calc((100vw - 900px)/2)) 128px;animation:up .4s ease}.view.show{display:block}@keyframes up{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}.hero{display:flex;justify-content:space-between;align-items:end;border-bottom:1px solid var(--line);padding-bottom:28px;margin-bottom:22px}.eyebrow{font-size:10px;letter-spacing:.25em;color:var(--accent);text-transform:uppercase;margin-bottom:16px}.hero h1{font:700 clamp(34px,7vw,58px)/1.12 var(--serif);letter-spacing:-.05em}.hero p{margin-top:15px;color:var(--muted);font-size:13px}#viewSearch.has-results .hero{display:none}.tip{min-height:300px;display:grid;place-content:center;text-align:center;color:var(--soft);font-size:13px}.tip.busy,.tip.compact{min-height:auto;display:block;place-content:auto;padding:6px 0 14px}.tip.compact{padding-bottom:4px}.ticon{width:58px;height:58px;border:1px solid var(--line);border-radius:50%;display:grid;place-items:center;margin:0 auto 15px}.ticon svg{width:23px;stroke:var(--muted);fill:none}
 .backbtn{margin-bottom:16px;padding:9px 16px;border:1px solid var(--line);font-size:13px;color:var(--muted);border-radius:2px}.sprog{height:3px;background:var(--line);overflow:hidden;margin:4px 0 10px}.sprog .sfill{height:100%;background:var(--accent);width:0;transition:width .5s}.sline{display:flex;align-items:center;gap:9px;color:var(--muted);font-size:12.5px;padding:2px 0 12px}.sline .mini{width:13px;height:13px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;flex:none}
 .book{display:flex;gap:18px;padding:19px 0;border-bottom:1px solid var(--line);cursor:pointer;transition:padding-left .2s}.book:hover{padding-left:7px}.book img{width:58px;height:82px;object-fit:cover;border-radius:4px;background:var(--accent-soft);box-shadow:0 7px 18px rgba(0,0,0,.12)}.book .info{min-width:0;flex:1}.book h3{font:600 17px var(--serif);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.book .meta{font-size:12px;color:var(--muted);margin:6px 0}.book .intro{font-size:12.5px;color:var(--muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.sbadge,.tag{font:500 10px var(--sans);letter-spacing:.04em;color:var(--accent);background:var(--accent-soft);padding:3px 8px;border-radius:3px;white-space:nowrap}.empty-result{text-align:center;color:var(--muted);padding:55px 0}
 .srcwrap{border-top:1px solid var(--line);margin-top:24px;padding-top:16px}.srclabel{font-size:12px;color:var(--muted);margin-bottom:10px}.chips{display:flex;flex-wrap:wrap;gap:8px}.chip{padding:8px 14px;border:1px solid var(--line);border-radius:16px;font-size:12.5px;color:var(--muted);transition:.2s}.chip.on{background:var(--ink);color:var(--bg);border-color:var(--ink);font-weight:600}
@@ -140,6 +140,8 @@ async function doSearch(){
   groups = []; lastSig = '';
   $('#list').innerHTML = '';
   $('#viewSearch').classList.remove('has-results');
+  $('#listTip').classList.remove('compact');
+  $('#listTip').classList.add('compact');
   $('#listTip').innerHTML = loading('正在聚合全部书源搜索（约 5-15 秒）…');
   try{
     const s = await apiPost('/api/search_start', { key: kw, limit: 6 });
@@ -154,6 +156,7 @@ async function doSearch(){
       if (d.finished){
         if (!(d.results || []).length){
           $('#viewSearch').classList.remove('has-results');
+          $('#listTip').classList.remove('compact');
           $('#listTip').innerHTML = '<div class="empty-result">没有找到相关书籍（本次尝试了 ' + d.total + ' 个书源' + (d.fails.length ? '，' + d.fails.length + ' 个源超时或失败' : '') + '），换个关键词试试</div>';
         } else tipProgress(d.done, d.total, d.results.length, true, d.fails);
         return;
@@ -208,7 +211,7 @@ async function loadDetailForSource(){
   $('#dTags').innerHTML = book.kind ? String(book.kind).split(/[,，\/]/).map(t => t.trim()).filter(Boolean).slice(0, 6).map(t => '<span class="tag">' + esc(t) + '</span>').join('') : '';
   $('#dCount').textContent = '加载中…';
   if (book.cover){ $('#dCover').style.visibility = 'visible'; $('#dCover').src = book.cover; } else $('#dCover').style.visibility = 'hidden';
-  $('#btnDl').disabled = true; $('#dlBar').classList.remove('show');
+  $('#btnRead').disabled = true; $('#btnDl').disabled = true; $('#dlBar').classList.remove('show');
   renderChips();
   try{
     const d = await apiGet('/api/detail?source_id=' + encodeURIComponent(book.source_id) + '&book_url=' + encodeURIComponent(book.book_url));
@@ -222,7 +225,7 @@ async function loadDetailForSource(){
     const t = await apiGet('/api/toc?source_id=' + encodeURIComponent(book.source_id) + '&toc_url=' + encodeURIComponent(book.toc_url || book.book_url));
     if (my !== srcSeq) return;
     chapters = (t.chapters || []).map(c => ({ title: c.title, url: c.url }));
-    if (chapters.length){ $('#btnDl').disabled = false; $('#dCount').textContent = '共 ' + chapters.length + ' 章'; }
+    if (chapters.length){ $('#btnRead').disabled = false; $('#btnDl').disabled = false; $('#dCount').textContent = '共 ' + chapters.length + ' 章'; }
     else $('#dCount').textContent = '该源目录为空，可点上方切换其他书源';
   }catch(e){
     if (my !== srcSeq) return;
