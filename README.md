@@ -5,6 +5,11 @@
 
 **🌐 在线网页版（免翻墙、免安装，打开即用）**：
 **https://ygmeh.github.io/novel-download-assistant/**
+
+**📚 过滤后的多源一键导入（已移除 18+ / 成人 / 漫画 / 有声 / 登录 / 脚本 / 加密源，共 356 条安全书源）：**
+https://raw.githubusercontent.com/YGMEH/novel-download-assistant/main/sources/builtin/reading_sources_safe.json
+
+在“阅读”App 中选择“网络导入”，粘贴上面的链接即可导入。
 纯静态单页（`docs/` 目录），浏览器直连番茄聚合源接口，支持搜索、在线阅读、整本 TXT 下载、夜间模式。
 完整多源功能（332 源聚合、并发下载、断点续传）请用下方本地部署方式。
 

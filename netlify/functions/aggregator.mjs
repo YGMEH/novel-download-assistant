@@ -6,6 +6,7 @@
 
 import { wuxianSearch, wuxianDetail, wuxianToc, wuxianContent, xilingSearch, xilingDetail, xilingToc, xilingContent } from './sources_extra.mjs';
 import { zonghengSearch, zonghengDetail, zonghengToc, zonghengContent, aixiaSearch, aixiaDetail, aixiaToc, aixiaContent, shaonianSearch, shaonianDetail, shaonianToc, shaonianContent } from './sources_more.mjs';
+import { listLegadoSources, legadoSearch, legadoDetail, legadoToc, legadoContent } from './legado_adapter.mjs';
 
 const UA = 'Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Mobile Safari/537.36';
 const UPSTREAM_TIMEOUT_MS = 12000;
@@ -257,8 +258,39 @@ async function handle(action, params) {
       return json({ ok: true, content });
     }
 
+    case 'legado_sources':
+      return json({ ok: true, sources: listLegadoSources() });
+
+    case 'legado_search': {
+      const id = (params.get('source') || '').trim();
+      const key = (params.get('key') || '').trim();
+      if (!id || !key) return errorJson('缺少 source 或 key', 400);
+      return json({ ok: true, books: await legadoSearch(id, key) });
+    }
+
+    case 'legado_detail': {
+      const id = (params.get('source') || '').trim();
+      const book = (params.get('book_url') || '').trim();
+      if (!id || !book) return errorJson('缺少 source 或 book_url', 400);
+      return json({ ok: true, book: await legadoDetail(id, book) });
+    }
+
+    case 'legado_toc': {
+      const id = (params.get('source') || '').trim();
+      const toc = (params.get('toc_url') || '').trim();
+      if (!id || !toc) return errorJson('缺少 source 或 toc_url', 400);
+      return json({ ok: true, chapters: await legadoToc(id, toc) });
+    }
+
+    case 'legado_content': {
+      const id = (params.get('source') || '').trim();
+      const chapter = (params.get('url') || '').trim();
+      if (!id || !chapter) return errorJson('缺少 source 或 url', 400);
+      return json({ ok: true, content: await legadoContent(id, chapter) });
+    }
+
     case 'ping':
-      return json({ ok: true, time: Date.now(), sources: ['fanqie', 'huanmeng', 'wuxian', 'dingding', 'zongheng', 'aixia', 'shaonian'] });
+      return json({ ok: true, time: Date.now(), sources: ['fanqie', 'huanmeng', 'wuxian', 'dingding', 'zongheng', 'aixia', 'shaonian'], legado: listLegadoSources().length });
 
     default:
       return errorJson('未知 action，可用：search / detail / toc / content / ping', 400);
