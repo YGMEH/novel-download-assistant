@@ -26,6 +26,24 @@ Set-ExecutionPolicy -Scope Process Bypass -Force
 ```
 
 脚本会创建 `.venv`、安装 `requirements.txt`、放行 Windows 防火墙 TCP 8765、后台启动服务，并检查本机 `/api/sources`。
+## 推荐方式：一次安装自动部署
+
+如果项目已经位于 `C:\novel\novel-download-assistant-main`，只需在管理员 PowerShell 执行下面一行：
+
+```powershell
+Invoke-WebRequest -UseBasicParsing -TimeoutSec 60 https://raw.githubusercontent.com/YGMEH/novel-download-assistant/main/auto_deploy_windows.ps1 -OutFile C:\auto_deploy_windows.ps1; powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:\auto_deploy_windows.ps1 -Install
+```
+
+脚本会安装计划任务 `NovelAutoDeploy`，每 5 分钟读取 GitHub `main` 的最新提交 SHA。只有检测到新提交才会下载后端、前端和书源同步脚本，然后执行 Python 语法检查、书源同步、服务重启和本机健康检查。部署前会将文件备份到 `C:\novel\novel-download-assistant-main\backups\deploy_时间`；下载或校验失败会自动恢复备份。
+
+每日书源任务 `NovelSourceDailySync` 继续保留，负责每天 03:30 更新健康书源。自动部署任务与每日书源任务互不替代。
+
+查看状态和日志：
+
+```powershell
+schtasks.exe /Query /TN NovelAutoDeploy /FO LIST
+Get-Content C:\novel\novel-download-assistant-main\logs\auto_deploy.log -Tail 50
+```
 
 ## 备用方式：服务器直接拉取
 
@@ -36,6 +54,7 @@ Set-ExecutionPolicy -Scope Process Bypass -Force
 Invoke-WebRequest -UseBasicParsing https://raw.githubusercontent.com/YGMEH/novel-download-assistant/main/deploy_windows.ps1 -OutFile C:\deploy_windows.ps1
 C:\deploy_windows.ps1
 ```
+
 
 ## 完成后的检查
 
