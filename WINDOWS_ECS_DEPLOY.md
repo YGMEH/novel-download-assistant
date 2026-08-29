@@ -31,7 +31,7 @@ Set-ExecutionPolicy -Scope Process Bypass -Force
 如果项目已经位于 `C:\novel\novel-download-assistant-main`，只需在管理员 PowerShell 执行下面一行：
 
 ```powershell
-Invoke-WebRequest -UseBasicParsing -TimeoutSec 60 https://raw.githubusercontent.com/YGMEH/novel-download-assistant/main/auto_deploy_windows.ps1 -OutFile C:\auto_deploy_windows.ps1; powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:\auto_deploy_windows.ps1 -Install
+Invoke-WebRequest -UseBasicParsing -TimeoutSec 60 https://ghfast.top/https://raw.githubusercontent.com/YGMEH/novel-download-assistant/main/auto_deploy_windows.ps1 -OutFile C:\auto_deploy_windows.ps1; powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:\auto_deploy_windows.ps1 -Install
 ```
 
 脚本会安装计划任务 `NovelAutoDeploy`，每 5 分钟读取 GitHub `main` 的最新提交 SHA。只有检测到新提交才会下载后端、前端和书源同步脚本，然后执行 Python 语法检查、书源同步、服务重启和本机健康检查。部署前会将文件备份到 `C:\novel\novel-download-assistant-main\backups\deploy_时间`；下载或校验失败会自动恢复备份。
