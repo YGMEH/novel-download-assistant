@@ -46,8 +46,15 @@ if (-not $PythonExe) {
 $LogDir = Join-Path $ProjectDir 'logs'
 $DeployLog = Join-Path $LogDir 'auto_deploy.log'
 $StateFile = Join-Path $ProjectDir '.auto-deploy-state.json'
-$ApiUrl = "https://api.github.com/repos/$Repo/commits/main"
-$RawBase = "https://raw.githubusercontent.com/$Repo"
+$ApiUrls = @(
+    "https://ghfast.top/https://api.github.com/repos/$Repo/commits/main",
+    "https://api.github.com/repos/$Repo/commits/main"
+)
+$RawBases = @(
+    "https://ghfast.top/https://raw.githubusercontent.com/$Repo",
+    "https://cdn.jsdelivr.net/gh/$Repo",
+    "https://raw.githubusercontent.com/$Repo"
+)
 $Files = @('rule_engine.py', 'source_manager.py', 'server.py', 'index.html', 'requirements.txt', 'scripts/sync_sources.py')
 
 New-Item -ItemType Directory -Force -Path $ProjectDir, $LogDir | Out-Null
@@ -61,9 +68,13 @@ function Log {
 
 function Get-RemoteSha {
     $headers = @{ 'User-Agent' = 'NovelAutoDeploy/1.0'; 'Accept' = 'application/vnd.github+json' }
-    $response = Invoke-RestMethod -UseBasicParsing -Uri $ApiUrl -Headers $headers -TimeoutSec 30
-    if (-not $response.sha) { throw 'GitHub API 未返回提交 SHA' }
-    return [string]$response.sha
+    foreach ($apiUrl in $ApiUrls) {
+        try {
+            $response = Invoke-RestMethod -UseBasicParsing -Uri $apiUrl -Headers $headers -TimeoutSec 20
+            if ($response.sha) { return [string]$response.sha }
+        } catch { Log "sha endpoint failed=$apiUrl error=$($_.Exception.Message)" }
+    }
+    throw '所有 GitHub 提交查询地址均失败'
 }
 
 function Stop-App {
@@ -125,10 +136,21 @@ function Deploy-Revision {
         foreach ($file in $Files) {
             $target = Join-Path $ProjectDir ($file -replace '/', '\')
             $temp = "$target.download"
-            $url = "$RawBase/$remoteSha/$file"
-            Invoke-WebRequest -UseBasicParsing -Uri $url -OutFile $temp -TimeoutSec 60
-            if ((Get-Item $temp).Length -lt 20) { throw "下载文件过小: $file" }
-            Move-Item $temp $target -Force
+            $downloaded = $false
+            foreach ($rawBase in $RawBases) {
+                try {
+                    $url = "$rawBase/$remoteSha/$file"
+                    Invoke-WebRequest -UseBasicParsing -Uri $url -OutFile $temp -TimeoutSec 30
+                    if ((Get-Item $temp).Length -lt 20) { throw "下载文件过小" }
+                    Move-Item $temp $target -Force
+                    $downloaded = $true
+                    break
+                } catch {
+                    Remove-Item $temp -Force -ErrorAction SilentlyContinue
+                    Log "download failed file=$file base=$rawBase error=$($_.Exception.Message)"
+                }
+            }
+            if (-not $downloaded) { throw "所有下载地址均失败: $file" }
         }
         Test-App
         $sync = Join-Path $ProjectDir 'scripts\sync_sources.py'
