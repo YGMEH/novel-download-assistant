@@ -86,23 +86,42 @@ jobs:
           else:
               raise SystemExit('DNS resolve failed after retries')
           auth=oss2.Auth(aki, aks)
-          last=None
-          for attempt in range(5):
-              scheme='https' if attempt % 2 == 0 else 'http'
+          import urllib.request as _u
+          try:
+              eip=_u.urlopen('https://api.ipify.org', timeout=15).read().decode().strip()
+              print('runner_egress_ip='+eip)
+          except Exception as _e:
+              print('egress_ip_unknown', _e)
+          host_ep=endpoint.split('://',1)[1]
+          def try_put(tag, url):
               try:
-                  bucket=oss2.Bucket(auth, scheme+'://'+endpoint.split('://',1)[1], bucket_name,
-                                     connect_timeout=60)
+                  b=oss2.Bucket(auth, url, bucket_name, connect_timeout=60)
                   with open('novel-package.zip','rb') as f:
-                      bucket.put_object('novel/latest.zip', f)
-                  print('upload_ok scheme=%s attempt=%d' % (scheme, attempt))
-                  last=None
+                      b.put_object('novel/latest.zip', f)
+                  print('%s OK' % tag)
+                  return True
+              except oss2.exceptions.OssError as e:
+                  print('%s FAIL status=%s code=%s' % (tag, e.status, getattr(e, 'code', '?')))
+                  print(str(e)[:250])
+                  return False
+              except Exception as e:
+                  print('%s NETFAIL %s %s' % (tag, type(e).__name__, str(e)[:120]))
+                  return False
+          ok=False
+          for tag, url in [('A_vh_https', 'https://'+host_ep),
+                           ('B_vh_http', 'http://'+host_ep),
+                           ('C_pathstyle_http_ip', 'http://118.31.219.207'),
+                           ('D_accelerate_https', 'https://oss-accelerate.aliyuncs.com')]:
+              if try_put(tag, url):
+                  ok=True
                   break
-              except oss2.exceptions.RequestError as e:
-                  last=e
-                  print('upload_retry scheme=%s attempt=%d' % (scheme, attempt))
-                  time.sleep(6*(attempt+1))
-          if last is not None:
-              raise last
+              time.sleep(3)
+          if not ok:
+              print('retry_A_after_30s')
+              time.sleep(30)
+              ok=try_put('E_vh_https_retry', 'https://'+host_ep)
+          if not ok:
+              raise SystemExit('ALL_UPLOAD_STRATEGIES_FAILED')
           bucket=oss2.Bucket(auth, endpoint, bucket_name, connect_timeout=60)
           with open('novel-package.zip.sha256','rb') as f:
               bucket.put_object('novel/latest.zip.sha256', f)
