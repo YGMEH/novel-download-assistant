@@ -67,7 +67,7 @@ jobs:
           bucket_name=os.environ['OSS_BUCKET'].strip()
           aki=os.environ['OSS_ACCESS_KEY_ID'].strip()
           aks=os.environ['OSS_ACCESS_KEY_SECRET'].strip()
-          host=endpoint.split('://',1)[1]
+          host = bucket_name + '.' + endpoint.split('://', 1)[1]
           for attempt in range(4):
               try:
                   infos=socket.getaddrinfo(host,443)
