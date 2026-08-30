@@ -18,7 +18,8 @@ jobs:
           set -euo pipefail
           rm -rf .dist novel-package.zip
           mkdir -p .dist
-          cp -r rule_engine.py source_manager.py server.py downloader.py index.html requirements.txt config.json sources scripts .dist/
+          [ -f config.json ] || echo '{}' > config.json
+          cp -r rule_engine.py source_manager.py server.py downloader.py tomato_source.py index.html requirements.txt config.json sources scripts .dist/
           rm -rf .dist/sources/builtin/*.bak .dist/__pycache__ .dist/scripts/__pycache__
           git rev-parse HEAD > .dist/VERSION
           (cd .dist && zip -qr ../novel-package.zip .)
