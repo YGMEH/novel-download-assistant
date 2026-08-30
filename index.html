@@ -87,26 +87,24 @@ document.querySelectorAll('.tab').forEach(el => el.addEventListener('click', () 
 /* ============ 搜索（聚合 + 同名同作者合并 + 增量无闪烁渲染） ============ */
 let searchSeq = 0, groups = [], lastSig = '';
 const norm = s => String(s || '').toLowerCase().replace(/[\s·・:：,，.。!！?？'’"“”]/g, '');
+function cleanField(v){ if(v==null || typeof v==='object') return ''; return String(v).replace(/\s+/g,' ').trim(); }
+function resultScore(r, kw){ const q=norm(kw), n=norm(r.name), a=norm(r.author), k=norm(r.kind); return (n===q?10000:n.startsWith(q)?8000:n.includes(q)?6000:0)+(a===q?3000:a.includes(q)?1500:0)+(k.includes(q)?300:0)+(r.book_url?100:0)+Number(r.source_quality||0); }
 
-function buildGroups(results){
+function buildGroups(results, kw = $('#kw').value){
   const map = new Map();
-  for (const r of results){
-    const k = norm(r.name);
-    let g = map.get(k);
-    if (!g){
-      g = { name: r.name || '未知书名', author: r.author || '', kind: r.kind || '', intro: r.intro || '', cover: r.cover || '', sources: [] };
-      map.set(k, g);
-    }
-    if (g.sources.some(s => s.source_id === r.source_id)) continue;
-    g.sources.push(r);
-    if (!g.cover && r.cover) g.cover = r.cover;
-    if (!g.intro && r.intro) r.intro && (g.intro = r.intro);
-    if (!g.kind && r.kind) g.kind = r.kind;
+  for (const raw of results){
+    const r = Object.assign({}, raw);
+    for (const f of ['name','author','kind','intro','cover','last_chapter','word_count','book_url']) r[f]=cleanField(r[f]);
+    if (!r.name || !r.book_url) continue;
+    const k=norm(r.name)+'|'+norm(r.author);
+    let g=map.get(k);
+    if(!g){ g={name:r.name,author:r.author,kind:r.kind,intro:r.intro,cover:r.cover,last_chapter:r.last_chapter,word_count:r.word_count,sources:[]}; map.set(k,g); }
+    if(g.sources.some(x=>x.source_id===r.source_id && x.book_url===r.book_url)) continue;
+    r._score=resultScore(r,kw); g.sources.push(r); g.sources.sort((a,b)=>b._score-a._score || String(a.source_name).localeCompare(String(b.source_name),'zh-CN'));
+    const best=g.sources[0];
+    for(const f of ['name','author','kind','intro','cover','last_chapter','word_count']) if(!g[f]&&best[f]) g[f]=best[f];
   }
-  return [...map.values()].sort((a, b) => {
-    const ac = a.cover ? 0 : 1, bc = b.cover ? 0 : 1;
-    return ac - bc || (Math.max(...a.sources.map(x => x.source_quality || 0)) < Math.max(...b.sources.map(x => x.source_quality || 0)) ? 1 : -1) || a.name.localeCompare(b.name, 'zh-CN');
-  });
+  return [...map.values()].sort((a,b)=>(b.sources[0]?._score||0)-(a.sources[0]?._score||0) || b.sources.length-a.sources.length || a.name.localeCompare(b.name,'zh-CN'));
 }
 
 function renderList(){
@@ -120,7 +118,7 @@ function renderList(){
       '<img loading="lazy" src="' + esc(g.cover || '') + '"' + (g.cover ? '' : ' style="display:none"') + ' onerror="this.style.display=\'none\'">' +
       '<div class="info"><h3>' + esc(g.name) + '</h3>' +
       '<div class="meta">' + esc(g.author || '佚名') + (g.kind ? ' · ' + esc(g.kind) : '') + ' <span class="sbadge">' + g.sources.length + ' 个来源</span></div>' +
-      '<div class="intro">' + esc(g.intro || '') + '</div></div></div>';
+      (g.last_chapter ? '<div class="meta">更新：' + esc(g.last_chapter) + '</div>' : '') + '<div class="intro">' + esc(g.intro || '暂无简介') + '</div></div></div>';
   });
   $('#list').innerHTML = html;
 }
@@ -154,7 +152,8 @@ async function doSearch(){
       if (seq !== searchSeq) return;
       const d = await apiGet('/api/search_poll?job_id=' + encodeURIComponent(jobId));
       if (seq !== searchSeq) return;
-      groups = buildGroups(d.results || []);
+      groups = buildGroups(d.results || [], kw);
+      renderList();
       if (d.finished){
         renderList();
         if (!(d.results || []).length){
