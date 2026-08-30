@@ -79,20 +79,24 @@ jobs:
           else:
               raise SystemExit('DNS resolve failed after retries')
           auth=oss2.Auth(aki, aks)
-          bucket=oss2.Bucket(auth, endpoint, bucket_name)
           last=None
-          for attempt in range(3):
+          for attempt in range(5):
+              scheme='https' if attempt % 2 == 0 else 'http'
               try:
+                  bucket=oss2.Bucket(auth, scheme+'://'+endpoint.split('://',1)[1], bucket_name,
+                                     connect_timeout=60)
                   with open('novel-package.zip','rb') as f:
                       bucket.put_object('novel/latest.zip', f)
+                  print('upload_ok scheme=%s attempt=%d' % (scheme, attempt))
                   last=None
                   break
               except oss2.exceptions.RequestError as e:
                   last=e
-                  print('upload_retry attempt=%d' % attempt)
-                  time.sleep(5*(attempt+1))
+                  print('upload_retry scheme=%s attempt=%d' % (scheme, attempt))
+                  time.sleep(6*(attempt+1))
           if last is not None:
               raise last
+          bucket=oss2.Bucket(auth, endpoint, bucket_name, connect_timeout=60)
           with open('novel-package.zip.sha256','rb') as f:
               bucket.put_object('novel/latest.zip.sha256', f)
           manifest={'sha':os.environ['GITHUB_SHA'],'package':'novel/latest.zip'}
