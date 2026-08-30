@@ -289,8 +289,9 @@ def api_search_start():
         return fail("请输入书名")
     cfg = load_config()
     timeout = min(int(cfg.get("timeout", 20)), 6)
-    limit = max(1, min(int(body.get("limit") or 6), 20))
+    limit = max(1, min(int(body.get("limit") or 20), 50))
     page = max(1, int(body.get("page") or 1))
+    author_pages = max(1, min(int(body.get("author_pages") or 3), 5))
     precision = bool(body.get("precision", False))
     sources = [s for s in store.all() if s.enabled and s.capability()["searchable"]]
     job_id = uuid.uuid4().hex
@@ -301,7 +302,10 @@ def api_search_start():
             "created": time.time(), "cancelled": False, "page": page, "key": key,
         }
     for src in sources:
-        _SEARCH_POOL.submit(_search_one, job_id, src, key, limit, timeout, page, precision)
+        _SEARCH_POOL.submit(
+            _search_one, job_id, src, key, limit, timeout, page, precision,
+            author_pages,
+        )
     return ok({"job_id": job_id, "total": len(sources), "page": page})
 
 
