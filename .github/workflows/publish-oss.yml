@@ -38,6 +38,16 @@ jobs:
             fi
           done
           python -m pip install --disable-pip-version-check oss2
+          BUCKET_HOST="${OSS_BUCKET}.${OSS_ENDPOINT}"
+          IP=$(curl -sm 15 "https://223.5.5.5/resolve?name=${BUCKET_HOST}&type=A" | python3 -c 'import sys,json; a=(json.load(sys.stdin).get("Answer") or []); print(a[0]["data"] if a else "")' || true)
+          if [ -z "$IP" ]; then
+            IP=$(curl -sm 15 "https://dns.google/resolve?name=${BUCKET_HOST}&type=A" | python3 -c 'import sys,json; a=(json.load(sys.stdin).get("Answer") or []); print(a[0]["data"] if a else "")' || true)
+          fi
+          echo "oss_dns_ip=${IP:-none}"
+          if [ -n "$IP" ]; then
+            echo "$IP ${BUCKET_HOST}" | sudo tee -a /etc/hosts > /dev/null
+            echo "hosts_pinned=true"
+          fi
           python - <<'PY'
           import json, os, socket, time, oss2
           endpoint=os.environ['OSS_ENDPOINT'].strip()
