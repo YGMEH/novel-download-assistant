@@ -40,9 +40,13 @@ jobs:
           python -m pip install --disable-pip-version-check oss2
           python - <<'PY'
           import json, os, oss2
-          endpoint=os.environ['OSS_ENDPOINT']
-          bucket_name=os.environ['OSS_BUCKET']
-          auth=oss2.Auth(os.environ['OSS_ACCESS_KEY_ID'], os.environ['OSS_ACCESS_KEY_SECRET'])
+          endpoint=os.environ['OSS_ENDPOINT'].strip()
+          bucket_name=os.environ['OSS_BUCKET'].strip()
+          aki=os.environ['OSS_ACCESS_KEY_ID'].strip()
+          aks=os.environ['OSS_ACCESS_KEY_SECRET'].strip()
+          print('diag endpoint_repr=%r bucket_repr=%r len=%d/%d' % (
+              endpoint, bucket_name, len(endpoint), len(bucket_name)))
+          auth=oss2.Auth(aki, aks)
           bucket=oss2.Bucket(auth, endpoint, bucket_name)
           with open('novel-package.zip','rb') as f: bucket.put_object('novel/latest.zip', f)
           with open('novel-package.zip.sha256','rb') as f: bucket.put_object('novel/latest.zip.sha256', f)
