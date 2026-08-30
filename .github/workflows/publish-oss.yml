@@ -31,6 +31,12 @@ jobs:
           OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
           OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
         run: |
+          for v in OSS_ENDPOINT OSS_BUCKET OSS_ACCESS_KEY_ID OSS_ACCESS_KEY_SECRET; do
+            if [ -z "${!v}" ]; then
+              echo "::error::Secret ${v} 未配置：Settings → Secrets and variables → Actions 添加后重跑"
+              exit 1
+            fi
+          done
           python -m pip install --disable-pip-version-check oss2
           python - <<'PY'
           import json, os, oss2
