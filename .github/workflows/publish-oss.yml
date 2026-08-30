@@ -50,6 +50,10 @@ jobs:
             echo "dnsgoogle_raw=$(echo "$RAW2" | head -c 300)"
             IP=$(echo "$RAW2" | python3 -c 'import sys,json; a=(json.load(sys.stdin).get("Answer") or []); print(a[0]["data"] if a else "")' 2>/dev/null || true)
           fi
+          if [ -z "$IP" ]; then
+            echo "fallback_pin=118.31.219.207 (authoritative CN view; global DNS may lag after bucket creation)"
+            IP="118.31.219.207"
+          fi
           echo "oss_dns_ip=${IP:-none}"
           if [ -n "$IP" ]; then
             echo "$IP ${BUCKET_HOST}" | sudo tee -a /etc/hosts > /dev/null
