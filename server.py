@@ -23,6 +23,7 @@ sys.path.insert(0, BASE_DIR)
 
 import downloader  # noqa: E402
 import rule_engine as R  # noqa: E402
+import tomato_source as builtin_tomato  # noqa: E402
 from source_manager import SourceStore  # noqa: E402
 
 app = Flask(__name__, static_folder=None)
@@ -90,6 +91,16 @@ def fail(message: str, code: int = 400):
     return jsonify({"success": False, "message": str(message)}), code
 
 
+def _get_source(source_id: str):
+    """按 ID 取书源：先查导入书源库，再落到内置源（当前为番茄内置）。"""
+    try:
+        return store.get(source_id)
+    except KeyError:
+        if source_id == builtin_tomato.SOURCE_ID:
+            return builtin_tomato.tomato_source
+        raise
+
+
 # --------------------------------------------------------------------------
 # 静态页面
 # --------------------------------------------------------------------------
@@ -113,6 +124,7 @@ def api_sources():
     keyword = (request.args.get("q") or "").strip().lower()
     brief = str(request.args.get("brief") or "").lower() in ("1", "true", "yes")
     items = [s.to_dict() for s in store.all()]
+    items.append(builtin_tomato.tomato_source.to_dict())
     if keyword:
         items = [i for i in items
                  if keyword in i["name"].lower() or keyword in i["url"].lower()
@@ -186,7 +198,7 @@ def api_search():
     if not source_id:
         return fail("请选择书源")
     try:
-        src = store.get(source_id)
+        src = _get_source(source_id)
     except KeyError as exc:
         return fail(str(exc), 404)
 
@@ -387,7 +399,7 @@ def api_detail():
     if not source_id or not book_url:
         return fail("缺少 source_id 或 book_url")
     try:
-        src = store.get(source_id)
+        src = _get_source(source_id)
     except KeyError as exc:
         return fail(str(exc), 404)
     cache_key = (source_id, book_url)
@@ -412,7 +424,7 @@ def api_toc():
     if not source_id or not toc_url:
         return fail("缺少 source_id 或 toc_url")
     try:
-        src = store.get(source_id)
+        src = _get_source(source_id)
     except KeyError as exc:
         return fail(str(exc), 404)
     cache_key = (source_id, toc_url)
@@ -439,7 +451,7 @@ def api_content():
     if not source_id or not url:
         return fail("缺少 source_id 或 url")
     try:
-        src = store.get(source_id)
+        src = _get_source(source_id)
     except KeyError as exc:
         return fail(str(exc), 404)
     try:
@@ -467,7 +479,7 @@ def api_download():
     if not source_id:
         return fail("缺少 source_id")
     try:
-        src = store.get(source_id)
+        src = _get_source(source_id)
     except KeyError as exc:
         return fail(str(exc), 404)
 
