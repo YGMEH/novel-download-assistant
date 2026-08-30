@@ -67,6 +67,13 @@ jobs:
           bucket_name=os.environ['OSS_BUCKET'].strip()
           aki=os.environ['OSS_ACCESS_KEY_ID'].strip()
           aks=os.environ['OSS_ACCESS_KEY_SECRET'].strip()
+          def _fp(tag, s):
+              import hashlib as _h
+              b=s.encode('utf-8')
+              kind='ascii' if all(33<=c<=126 for c in b) else 'NONASCII'
+              print('%s len=%d kind=%s hash8=%s tail=%r' % (tag, len(b), kind, _h.sha256(b).hexdigest()[:8], b[-4:].decode('utf-8','replace')))
+          _fp('FP_ID', aki)
+          _fp('FP_SECRET', aks)
           host = bucket_name + '.' + endpoint.split('://', 1)[1]
           for attempt in range(4):
               try:
