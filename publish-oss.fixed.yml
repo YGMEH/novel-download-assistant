@@ -1,0 +1,74 @@
+name: Publish deployment package to Aliyun OSS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: publish-oss-main
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build package
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf .dist novel-package.zip novel-package.zip.sha256
+          mkdir -p .dist
+          cp -r rule_engine.py source_manager.py server.py downloader.py tomato_source.py index.html requirements.txt sources scripts .dist/
+          rm -rf .dist/sources/builtin/*.bak .dist/__pycache__ .dist/scripts/__pycache__
+          git rev-parse HEAD > .dist/VERSION
+          (cd .dist && zip -qr ../novel-package.zip .)
+          sha256sum novel-package.zip | awk '{print $1}' > novel-package.zip.sha256
+      - name: Upload to OSS
+        env:
+          OSS_ENDPOINT: ${{ secrets.OSS_ENDPOINT }}
+          OSS_BUCKET: ${{ secrets.OSS_BUCKET }}
+          OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
+          OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in OSS_ENDPOINT OSS_BUCKET OSS_ACCESS_KEY_ID OSS_ACCESS_KEY_SECRET; do
+            if [ -z "${!name:-}" ]; then echo "::error::Secret $name is not configured"; exit 1; fi
+          done
+          python -m pip install --disable-pip-version-check --quiet 'oss2>=2.18,<3'
+          python - <<'PY'
+          import json, os, sys
+          from urllib.parse import urlsplit
+          import oss2
+          raw=os.environ['OSS_ENDPOINT'].strip().rstrip('/')
+          if '://' not in raw: raw='https://'+raw
+          parsed=urlsplit(raw)
+          if parsed.scheme not in ('http','https') or not parsed.hostname: raise SystemExit('Invalid OSS_ENDPOINT')
+          bucket_name=os.environ['OSS_BUCKET'].strip(); host=parsed.hostname
+          if host.startswith(bucket_name+'.'): host=host[len(bucket_name)+1:]
+          endpoint=f'{parsed.scheme}://{host}'
+          print(f'endpoint={endpoint} bucket={bucket_name}')
+          auth=oss2.Auth(os.environ['OSS_ACCESS_KEY_ID'].strip(),os.environ['OSS_ACCESS_KEY_SECRET'].strip())
+          bucket=oss2.Bucket(auth,endpoint,bucket_name,connect_timeout=30)
+          try:
+              for obj,path,ctype in (('novel/latest.zip','novel-package.zip','application/zip'),('novel/latest.zip.sha256','novel-package.zip.sha256','text/plain')):
+                  result=bucket.put_object_from_file(obj,path,headers={'Content-Type':ctype,'Cache-Control':'no-cache'})
+                  if result.status//100!=2: raise RuntimeError(f'HTTP {result.status}: {obj}')
+                  size=bucket.head_object(obj).content_length
+                  if size!=os.path.getsize(path): raise RuntimeError(f'size mismatch: {obj}')
+                  print(f'uploaded object={obj} bytes={size}')
+              manifest=json.dumps({'sha':os.environ['GITHUB_SHA'],'package':'novel/latest.zip'},separators=(',',':')).encode()
+              result=bucket.put_object('novel/latest.json',manifest,headers={'Content-Type':'application/json','Cache-Control':'no-cache'})
+              if result.status//100!=2: raise RuntimeError(f'manifest HTTP {result.status}')
+              print('published sha='+os.environ['GITHUB_SHA'])
+          except oss2.exceptions.OssError as exc:
+              print(f'::error::OSS status={exc.status} code={exc.code} request_id={getattr(exc,"request_id","unknown")} message={exc.message}',file=sys.stderr)
+              raise SystemExit(1)
+          except Exception as exc:
+              print(f'::error::OSS type={type(exc).__name__} message={exc}',file=sys.stderr);raise SystemExit(1)
+          PY
