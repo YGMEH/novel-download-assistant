@@ -88,8 +88,15 @@ document.querySelectorAll('.tab').forEach(el => el.addEventListener('click', () 
 let searchSeq = 0, groups = [], lastSig = '';
 const norm = s => String(s || '').toLowerCase().replace(/[\s·・:：,，.。!！?？'’"“”]/g, '');
 function cleanField(v){ if(v==null || typeof v==='object') return ''; return String(v).replace(/\s+/g,' ').trim(); }
-function resultScore(r, kw){ const q=norm(kw), n=norm(r.name), a=norm(r.author), k=norm(r.kind); return (n===q?10000:n.startsWith(q)?8000:n.includes(q)?6000:0)+(a===q?3000:a.includes(q)?1500:0)+(k.includes(q)?300:0)+(r.book_url?100:0)+Number(r.source_quality||0); }
-
+function sourceScore(r){
+  return Number(r.source_quality || 0) + (r.book_url ? 20 : 0) + (r.cover ? 8 : 0) +
+    (r.intro ? 6 : 0) + (r.last_chapter ? 4 : 0) + (r.author ? 2 : 0);
+}
+function resultScore(r, kw){
+  const q=norm(kw), n=norm(r.name), a=norm(r.author), k=norm(r.kind);
+  return (n===q?10000:n.startsWith(q)?8000:n.includes(q)?6000:0)+
+    (a===q?5000:a.includes(q)?2500:0)+(k.includes(q)?300:0)+sourceScore(r);
+}
 function buildGroups(results, kw = $('#kw').value){
   const map = new Map();
   for (const raw of results){
