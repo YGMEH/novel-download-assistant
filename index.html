@@ -84,7 +84,7 @@ window.addEventListener('popstate', () => {
 });
 document.querySelectorAll('.tab').forEach(el => el.addEventListener('click', () => switchTab(el.dataset.tab)));
 
-/* ============ 搜索（聚合 + 同名同作者合并 + 增量无闪烁渲染） ============ */
+/* ============ 搜索（同名合并 + 来源质量排序 + 增量渲染） ============ */
 let searchSeq = 0, groups = [], lastSig = '';
 const norm = s => String(s || '').toLowerCase().replace(/[\s·・:：,，.。!！?？'’"“”]/g, '');
 function cleanField(v){ if(v==null || typeof v==='object') return ''; return String(v).replace(/\s+/g,' ').trim(); }
@@ -103,15 +103,18 @@ function buildGroups(results, kw = $('#kw').value){
     const r = Object.assign({}, raw);
     for (const f of ['name','author','kind','intro','cover','last_chapter','word_count','book_url']) r[f]=cleanField(r[f]);
     if (!r.name || !r.book_url) continue;
-    const k=norm(r.name)+'|'+norm(r.author);
+    const k=norm(r.name);
     let g=map.get(k);
-    if(!g){ g={name:r.name,author:r.author,kind:r.kind,intro:r.intro,cover:r.cover,last_chapter:r.last_chapter,word_count:r.word_count,sources:[]}; map.set(k,g); }
+    if(!g){ g={name:r.name,author:'',kind:'',intro:'',cover:'',last_chapter:'',word_count:'',sources:[]}; map.set(k,g); }
     if(g.sources.some(x=>x.source_id===r.source_id && x.book_url===r.book_url)) continue;
-    r._score=resultScore(r,kw); g.sources.push(r); g.sources.sort((a,b)=>b._score-a._score || String(a.source_name).localeCompare(String(b.source_name),'zh-CN'));
+    r._sourceScore=sourceScore(r);
+    r._resultScore=resultScore(r,kw);
+    g.sources.push(r);
+    g.sources.sort((a,b)=>b._sourceScore-a._sourceScore || b._resultScore-a._resultScore || String(a.source_name).localeCompare(String(b.source_name),'zh-CN'));
     const best=g.sources[0];
-    for(const f of ['name','author','kind','intro','cover','last_chapter','word_count']) if(!g[f]&&best[f]) g[f]=best[f];
+    for(const f of ['name','author','kind','intro','cover','last_chapter','word_count']) g[f]=best[f] || g[f] || '';
   }
-  return [...map.values()].sort((a,b)=>(b.sources[0]?._score||0)-(a.sources[0]?._score||0) || b.sources.length-a.sources.length || a.name.localeCompare(b.name,'zh-CN'));
+  return [...map.values()].sort((a,b)=>(b.sources[0]?._resultScore||0)-(a.sources[0]?._resultScore||0) || b.sources.length-a.sources.length || a.name.localeCompare(b.name,'zh-CN'));
 }
 
 function renderList(){
@@ -152,7 +155,7 @@ async function doSearch(){
   $('#listTip').classList.add('compact');
   $('#listTip').innerHTML = loading('正在聚合全部书源搜索（约 5-15 秒）…');
   try{
-    const s = await apiPost('/api/search_start', { key: kw, limit: 6 });
+    const s = await apiPost('/api/search_start', { key: kw, limit: 20, author_pages: 3 });
     const jobId = s.job_id;
     for(;;){
       await sleep(800);
@@ -210,7 +213,7 @@ async function loadDetailForSource(){
   const it = curGroup.sources[curSrcIdx];
   book = {
     source_id: it.source_id, source_name: it.source_name,
-    name: curGroup.name, author: curGroup.author,
+    name: it.name || curGroup.name, author: it.author || curGroup.author,
     kind: it.kind || curGroup.kind, intro: it.intro || curGroup.intro,
     cover: it.cover || curGroup.cover, book_url: it.book_url, toc_url: ''
   };
