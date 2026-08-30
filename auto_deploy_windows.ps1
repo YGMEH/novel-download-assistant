@@ -48,7 +48,19 @@ function Worker{
     foreach($f in $Files){$t=Join-Path $ProjectDir ($f -replace '/','\');if(Test-Path $t){$d=Join-Path $backup ($f -replace '/','\');New-Item -ItemType Directory -Force -Path (Split-Path $d)|Out-Null;Copy-Item $t $d -Force}}
     try{
       foreach($f in $Files){$s=Join-Path $stage ($f -replace '/','\');$t=Join-Path $ProjectDir ($f -replace '/','\');New-Item -ItemType Directory -Force -Path (Split-Path $t)|Out-Null;Copy-Item $s $t -Force}
-      Test-Code;& $PythonExe (Join-Path $ProjectDir 'scripts\sync_sources.py') --probe-key test >> $LogFile 2>&1;$sync=$LASTEXITCODE
+      Test-Code
+      $syncOut=Join-Path $env:TEMP "novel-source-sync-$PID.out";$syncErr=Join-Path $env:TEMP "novel-source-sync-$PID.err"
+      try{
+        $syncProcess=Start-Process -FilePath $PythonExe -WorkingDirectory $ProjectDir -ArgumentList @("scripts\sync_sources.py","--probe-key","test") -RedirectStandardOutput $syncOut -RedirectStandardError $syncErr -Wait -PassThru -WindowStyle Hidden
+        $sync=$syncProcess.ExitCode
+        if(Test-Path $syncOut){Get-Content $syncOut|Add-Content -LiteralPath $LogFile -Encoding UTF8}
+        if(Test-Path $syncErr){Get-Content $syncErr|Add-Content -LiteralPath $LogFile -Encoding UTF8}
+        Log "source sync completed exit=$sync; continuing deployment"
+      }catch{
+        $sync=-1;Log "source sync launch failed error=$($_.Exception.Message); continuing deployment"
+      }finally{
+        Remove-Item $syncOut,$syncErr -Force -ErrorAction SilentlyContinue
+      }
       Stop-App;Start-App;Test-Health
       @{sha=$sha;deployed_at=(Get-Date).ToString('s');sync_exit=$sync}|ConvertTo-Json|Set-Content -LiteralPath $State -Encoding UTF8;Log "deployed sha=$sha sync_exit=$sync backup=$backup"
     }catch{foreach($f in $Files){$s=Join-Path $backup ($f -replace '/','\');$t=Join-Path $ProjectDir ($f -replace '/','\');if(Test-Path $s){Copy-Item $s $t -Force}};Stop-App;Start-App;Log "FAILED sha=$sha error=$($_.Exception.Message) restored=$backup";throw}
