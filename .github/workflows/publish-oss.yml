@@ -39,9 +39,12 @@ jobs:
           done
           python -m pip install --disable-pip-version-check oss2
           BUCKET_HOST="${OSS_BUCKET}.${OSS_ENDPOINT}"
-          RAW=$(curl -sm 20 "https://223.5.5.5/resolve?name=${BUCKET_HOST}&type=A&edns_client_subnet=118.31.0.0/16" || echo CURL_ERR=$?)
-          echo "alidns_cn_raw=$(echo "$RAW" | head -c 300)"
-          IP=$(echo "$RAW" | python3 -c 'import sys,json; a=(json.load(sys.stdin).get("Answer") or []); print(a[0]["data"] if a else "")' 2>/dev/null || true)
+          IP=""
+          for SUB in 101.80.0.0/16 111.0.0.0/16 116.16.0.0/16 220.181.0.0/16 39.96.0.0/16; do
+            RAW=$(curl -sm 20 "https://223.5.5.5/resolve?name=${BUCKET_HOST}&type=A&edns_client_subnet=${SUB}" || true)
+            IP=$(echo "$RAW" | python3 -c 'import sys,json; a=(json.load(sys.stdin).get("Answer") or []); print(a[0]["data"] if a else "")' 2>/dev/null || true)
+            if [ -n "$IP" ]; then echo "alidns_hit subnet=${SUB} ip=${IP}"; break; fi
+          done
           if [ -z "$IP" ]; then
             RAW2=$(curl -sm 20 "https://dns.google/resolve?name=${BUCKET_HOST}&type=A" || echo CURL_ERR=$?)
             echo "dnsgoogle_raw=$(echo "$RAW2" | head -c 300)"
