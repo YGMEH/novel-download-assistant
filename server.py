@@ -212,13 +212,41 @@ def api_search():
     return ok({"results": results, "source": src.to_dict()})
 
 
-def _search_one(job_id, src, key, limit, timeout, page=1, precision=False):
+def _normalize_author(value):
+    value = str(value or "").strip().lower()
+    for prefix in ("作者：", "作者:", "作者", "作家：", "作家:", "作家"):
+        if value.startswith(prefix):
+            value = value[len(prefix):].strip()
+            break
+    return "".join(value.split())
+
+
+def _search_one(job_id, src, key, limit, timeout, page=1, precision=False,
+                author_pages=1):
     with _SEARCH_LOCK:
         job = _SEARCH_JOBS.get(job_id)
         if job is None or job.get("cancelled"):
             return  # 已取消/已过期：未开始的任务直接退出，不占线程池继续请求
     try:
         rows = src.search(key, page=page, limit=limit, timeout=timeout)
+        key_norm = _normalize_author(key)
+        author_match = any(
+            _normalize_author(r.get("author")) == key_norm
+            for r in rows
+        )
+        if author_match and author_pages > 1:
+            seen = {(r.get("book_url"), r.get("source_id")) for r in rows}
+            for next_page in range(page + 1, page + author_pages):
+                more = src.search(key, page=next_page, limit=limit, timeout=timeout)
+                added = 0
+                for row in more:
+                    marker = (row.get("book_url"), row.get("source_id"))
+                    if marker not in seen:
+                        seen.add(marker)
+                        rows.append(row)
+                        added += 1
+                if not more or not added:
+                    break
         if precision:
             low = key.lower()
             rows = [
